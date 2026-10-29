@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Мессенджер</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="app-body">
+  <div id="appWrapper" class="app hidden">
+    <aside class="sidebar">
+      <header class="sidebar-top">
+        <button id="openSettings" class="icon-btn" title="Меню">☰</button>
+        <button id="createChannelBtn" class="icon-btn" title="Создать канал">📢</button>
+        <div class="search">
+          <span class="search-icon">🔍</span>
+          <input id="searchInput" placeholder="Поиск (@username)" autocomplete="off">
+        </div>
+      </header>
+      <div id="chats" class="chats"></div>
+      <p id="emptyChats" class="empty-state hidden">Введите @username в поиске,<br>чтобы найти собеседника</p>
+      
+      <footer class="my-profile">
+        <div id="myAvatar" class="avatar avatar-md"></div>
+        <div class="my-info">
+          <strong id="myName"></strong>
+          <span id="myWallet" class="wallet">⭐ 0</span>
+        </div>
+        <button id="logout" class="icon-btn" title="Выйти">↪</button>
+      </footer>
+    </aside>
+
+    <main class="chat">
+      <header id="chatHeader" class="chat-header clickable">
+        <div id="chatAvatar" class="avatar avatar-md"></div>
+        <div class="chat-heading">
+          <strong id="chatTitle">Выбери собеседника</strong>
+          <span id="chatSubtitle">Личные сообщения</span>
+        </div>
+        <div class="chat-actions">
+          <button id="call" class="round-btn" title="Аудио">☎</button>
+          <button id="videoCall" class="round-btn" title="Видео">▣</button>
+        </div>
+      </header>
+      <section id="messages" class="messages">
+        <div id="welcome" class="welcome">
+          <div class="welcome-icon">✉</div>
+          <h2>Добро пожаловать!</h2>
+          <p>Найди друга через строку поиска.</p>
+        </div>
+      </section>
+      <footer class="composer">
+        <button id="record" class="tool-btn" title="Голосовое">🎙</button>
+        <input id="text" placeholder="Написать сообщение…" autocomplete="off">
+        <button id="gift" class="tool-btn" title="Подарок">🎁</button>
+        <button id="send" class="send-btn" title="Отправить">➤</button>
+      </footer>
+      <audio id="remoteAudio" autoplay></audio>
+      <video id="remoteVideo" autoplay playsinline></video>
+      <video id="localVideo" autoplay muted playsinline></video>
+    </main>
+  </div>
+
+  <div id="settingsBackdrop" class="backdrop hidden"></div>
+  <aside id="settingsPanel" class="side-panel">
+    <header class="side-panel-header"><h2 id="menuHeaderTitle">Меню</h2><button id="closeSettings" class="icon-btn">✖</button></header>
+    <div id="mainMenuView" class="side-panel-body" style="padding: 15px;">
+      <div class="menu-profile-card" id="menuProfileCard">
+        <div id="menuAvatar" class="avatar avatar-md"></div>
+        <div class="menu-profile-info">
+          <strong id="menuName"></strong>
+          <span id="menuUsername"></span>
+        </div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" id="menuMyProfile"><div class="menu-icon" style="background: #2aabee;">👤</div><span>Мой профиль</span><span class="menu-arrow">›</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" id="menuChats"><div class="menu-icon" style="background: #4dcd5e;">💬</div><span>Чаты</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuMyBots"><div class="menu-icon" style="background: #7c4dff;">🤖</div><span>Мои боты</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuGiftShop"><div class="menu-icon" style="background: #ff9800;">🎁</div><span>Магазин подарков</span><span class="menu-arrow">›</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" id="menuNFT"><div class="menu-icon" style="background: #9c27b0;">💎</div><span>NFT Юзернеймы</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuMarket"><div class="menu-icon" style="background: #2196f3;">🛒</div><span>Маркет</span><span class="menu-arrow">›</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" id="menuCatWallet">
+          <div class="menu-icon" style="background: transparent; overflow: hidden; padding: 0;"><img src="/images/models/m2.png" style="width: 100%; height: 100%; object-fit: cover;"></div>
+          <span>CAT Wallet</span>
+          <span class="menu-badge" id="menuCatBadge">0 $CAT</span>
+        </div>
+        <div class="menu-item" id="menuPremium"><div class="menu-icon" style="background: #ffd700; color: #000;">👑</div><span>YoriGram Premium</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuWallet"><div class="menu-icon" style="background: #e91e63;">⭐</div><span>Кошелек</span><span class="menu-badge" id="menuBalanceBadge">0</span></div>
+      </div>
+      <div class="menu-group">
+        <div class="menu-item" id="menuAdmin" style="display: none;"><div class="menu-icon" style="background: #607d8b;">⚙️</div><span>Админ-панель</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuSettings"><div class="menu-icon" style="background: #78909c;">🛠</div><span>Настройки профиля</span><span class="menu-arrow">›</span></div>
+        <div class="menu-item" id="menuLogout"><div class="menu-icon" style="background: #ef5350;">🚪</div><span style="color: #ef5350;">Выйти</span></div>
+      </div>
+    </div>
+
+    <div id="settingsView" class="side-panel-body hidden">
+      <button id="backToMenuBtn" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <div class="tg-profile-edit">
+        <div class="tg-avatar-section"><div id="settingsAvatar" class="avatar avatar-xxl"></div><div class="camera-badge" id="changeAvatarBtn">📷</div></div>
+        <h2 id="settingsDisplayName" class="tg-name-preview">Имя</h2>
+        <p class="tg-status-preview" id="settingsUsernamePreview">@username</p>
+        <div class="tg-list">
+          <div class="tg-list-item"><span class="tg-icon">👤</span><span class="tg-label">Name</span><input id="editDisplayName" class="tg-input"></div>
+          <div class="tg-list-item tg-bio-item"><textarea id="editBio" placeholder="О себе"></textarea></div>
+          <div class="tg-list-item"><span class="tg-icon">📞</span><span class="tg-label">Phone</span><span id="editPhone" class="tg-value readonly"></span></div>
+          <div class="tg-list-item"><span class="tg-icon">@</span><span class="tg-label">Username</span><input id="editUsername" class="tg-input"></div>
+          <div class="tg-list-item" style="flex-wrap: wrap;">
+            <span class="tg-icon">📢</span><span class="tg-label">Channel</span>
+            <input id="editChannel" class="tg-input" readonly placeholder="Создать канал" style="cursor: pointer;">
+          </div>
+          <div class="tg-list-item"><span class="tg-icon">🎂</span><span class="tg-label">Birthday</span><input id="editBirthday" class="tg-input"></div>
+        </div>
+        <div id="inlineColorPicker" class="inline-color-picker hidden"><p>Выберите цвет:</p><div id="colorPicker" class="color-picker"></div></div>
+        <button id="saveProfile" class="btn btn-primary full" style="margin-top: 20px;">Сохранить</button>
+      </div>
+    </div>
+
+    <div id="nftView" class="side-panel-body hidden">
+      <button id="backToMenuFromNft" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <h3 style="margin-bottom: 15px; color: #fff;">Ваши NFT юзернеймы</h3>
+      <div id="nftList"></div>
+      <button id="clearAllNftBtn" class="btn btn-ghost full" style="margin-top: 15px; color: #ef5350; border: 1px solid #ef5350;">Снять все</button>
+    </div>
+
+    <div id="walletView" class="side-panel-body hidden">
+      <button id="backToMenuFromWallet" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <div class="wallet-balance"><span>Баланс:</span><strong id="settingsWallet">⭐️ 0</strong></div>
+      <button id="topupBtn" class="btn btn-primary full">Пополнить</button>
+    </div>
+
+    <div id="premiumView" class="side-panel-body hidden">
+      <button id="backToMenuFromPremium" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <div class="premium-card">
+        <div class="premium-crown">👑</div>
+        <h3>YoriGram Premium</h3>
+        <p style="color: #7f91a4; font-size: 13px; margin-bottom: 15px;">Безлимитные каналы и другие бонусы.</p>
+        <button id="buyPremiumBtn" class="btn btn-primary full">Купить за 500 ⭐️</button>
+      </div>
+    </div>
+
+    <div id="catView" class="side-panel-body hidden">
+      <button id="backToMenuFromCat" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <h3 style="margin-bottom: 15px; color: #fff;">CAT Wallet</h3>
+      <div style="display: flex; align-items: center; gap: 15px; background: linear-gradient(135deg, #1c1c1e, #2c2c2e); padding: 20px; border-radius: 16px; margin-bottom: 15px;">
+        <img src="/images/models/m2.png" style="width: 60px; height: 60px; border-radius: 12px; object-fit: cover;">
+        <div>
+          <div style="font-size: 12px; color: #7f91a4;">Баланс</div>
+          <div style="font-size: 24px; color: #ffd700; font-weight: 700;" id="catBalanceView">0 $CAT</div>
+        </div>
+      </div>
+      <div style="background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <div style="font-size: 12px; color: #7f91a4; margin-bottom: 5px;">Адрес кошелька</div>
+        <div style="font-family: monospace; font-size: 12px; color: #fff; word-break: break-all;" id="catAddressView">...</div>
+      </div>
+      <div style="background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <h4 style="color: #fff; margin-bottom: 10px; font-size: 14px;">Обменять звёзды на $CAT</h4>
+        <p style="font-size: 12px; color: #7f91a4; margin-bottom: 10px;">1 $CAT = 10 000 ⭐</p>
+        <input type="number" id="catExchangeInput" placeholder="Звёзд (кратно 10000)" style="width: 100%; padding: 10px; border-radius: 8px; background: #232e3c; border: 1px solid #242f3d; color: #fff; margin-bottom: 8px;">
+        <button id="catExchangeBtn" class="btn btn-primary full">Обменять</button>
+      </div>
+      <div style="background: #1c1c1e; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+        <h4 style="color: #fff; margin-bottom: 10px; font-size: 14px;">Перевести $CAT по адресу</h4>
+        <input type="text" id="catTransferAddress" placeholder="Адрес кошелька (EQ...)" style="width: 100%; padding: 10px; border-radius: 8px; background: #232e3c; border: 1px solid #242f3d; color: #fff; margin-bottom: 8px; font-family: monospace; font-size: 12px;">
+        <input type="number" id="catTransferAmount" placeholder="Сумма в $CAT" style="width: 100%; padding: 10px; border-radius: 8px; background: #232e3c; border: 1px solid #242f3d; color: #fff; margin-bottom: 8px;">
+        <button id="catTransferBtn" class="btn btn-primary full">Отправить</button>
+      </div>
+      <div style="background: #1c1c1e; padding: 15px; border-radius: 12px;">
+        <h4 style="color: #fff; margin-bottom: 10px; font-size: 14px;">Ваши NFT номера</h4>
+        <div id="myNftNumbersList"></div>
+      </div>
+    </div>
+
+    <div id="botsView" class="side-panel-body hidden">
+      <button id="backToMenuFromBots" class="btn btn-ghost" style="margin-bottom: 15px; padding: 0; color: #7f91a4;">‹ Назад</button>
+      <button id="createBotBtn" class="btn btn-primary full" style="margin-bottom: 15px; background: #7c4dff;">+ Создать бота</button>
+      <div id="botsList"></div>
+    </div>
+  </aside>
+
+  <div id="profileViewModal" class="modal-overlay hidden dark-overlay">
+    <div class="profile-card-modern">
+      <button id="closeProfileView" class="icon-btn profile-close-btn">✖</button>
+      <div class="profile-banner-modern" id="profileBanner"></div>
+      <div class="profile-header-modern">
+        <div class="profile-avatar-wrapper">
+          <div id="viewAvatar" class="avatar avatar-huge"></div>
+        </div>
+        <h2 id="viewName" class="profile-name-modern">Имя</h2>
+        <div class="profile-balance-pill">
+          <span>Баланс: <strong id="viewCatBalance">0</strong> $CAT</span>
+        </div>
+      </div>
+      <div class="profile-actions-modern">
+        <button class="action-btn-modern"><span>💬</span>Чат</button>
+        <button class="action-btn-modern"><span>🔔</span>Звук</button>
+        <button class="action-btn-modern"><span>📞</span>Звонок</button>
+        <button class="action-btn-modern"><span>•••</span>Ещё</button>
+      </div>
+      <div class="profile-status-bar">
+        <span id="viewBioStatus">Статус не установлен</span>
+      </div>
+      <div class="profile-info-section">
+        <div id="viewNftPhoneRow" class="nft-phone-row" style="display: none;">
+          <div class="nft-phone-icon">💎</div>
+          <div class="nft-phone-details">
+            <strong id="viewNftPhone" class="nft-phone-number"></strong>
+            <span class="nft-phone-label">Анонимный номер</span>
+          </div>
+        </div>
+        <div class="profile-username-section">
+          <h3 id="viewUsername" style="color: #fff; font-size: 16px; margin-bottom: 4px;">@username</h3>
+          <div id="viewNftUsernames" class="profile-nft-usernames-list" style="display: none;"></div>
+        </div>
+        <div class="profile-bio-section">
+          <h4 style="color: #fff; font-size: 14px; margin-bottom: 4px;">О себе</h4>
+          <p id="viewBioText" style="color: #7f91a4; font-size: 13px;">Описание отсутствует</p>
+        </div>
+      </div>
+      <div class="profile-tabs-modern">
+        <span class="active">Подарки</span>
+        <span>Истории</span>
+        <span>Посты</span>
+      </div>
+      <div id="viewGifts" class="profile-gifts-grid-modern"></div>
+    </div>
+  </div>
+
+  <div id="channelProfileModal" class="modal-overlay hidden">
+    <div class="fragment-profile-card">
+      <div class="profile-banner" id="channelProfileBanner" style="background: linear-gradient(135deg, #2aabee, #8e2de2);"></div>
+      <div class="profile-header-info">
+        <div id="channelProfileAvatar" class="avatar avatar-xxl profile-avatar"></div>
+        <h2 id="channelProfileName" class="profile-name"></h2>
+        <p id="channelProfileUsername" class="profile-status"></p>
+        <p id="channelProfileSubs" style="color: #7f91a4; font-size: 13px; margin-top: 4px;"></p>
+        <button id="closeChannelProfile" class="btn btn-ghost" style="position: absolute; right: 15px; top: 15px; color: #fff; background: rgba(0,0,0,0.5); border-radius: 50%; width: 36px; height: 36px; padding: 0; z-index: 10;">✖</button>
+      </div>
+      <div style="padding: 20px;">
+        <p id="channelProfileDesc" style="color: #7f91a4; font-size: 14px; margin-bottom: 15px; text-align: center;"></p>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <button id="subscribeChannelBtn" class="btn btn-primary full">Подписаться</button>
+          <button id="openChannelChatBtn" class="btn btn-ghost full" style="border: 1px solid #242f3d;">Открыть чат</button>
+        </div>
+        <div id="channelOwnerActions" style="display: none;">
+          <button id="setChannelUsernameBtn" class="btn btn-primary full" style="background: #ffd700; color: #000; margin-bottom: 10px;">Установить NFT @username (500 ⭐)</button>
+        </div>
+        <div style="margin-top: 20px;">
+          <h3 style="color: #fff; margin-bottom: 10px;">Посты</h3>
+          <div id="channelProfilePosts" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="nftUsernameModal" class="modal-overlay hidden dark-overlay">
+    <div class="collectible-modal-card" style="max-width: 400px;">
+      <button id="closeNftUsername" class="icon-btn" style="position: absolute; right: 15px; top: 15px; color: #fff; z-index: 10; background: rgba(0,0,0,0.3); border-radius: 50%;">✕</button>
+      <div class="nft-view-top">
+        <div class="nft-view-icon">@</div>
+        <h2 id="nftViewUsername" class="nft-view-title">@username</h2>
+        <p id="nftViewOwner" class="nft-view-owner"></p>
+      </div>
+      <div class="collectible-info-table">
+        <div class="gift-info-row"><div class="gift-info-label">Владелец</div><div class="gift-info-value" id="nftViewOwnerUsername">@?</div></div>
+        <div class="gift-info-row"><div class="gift-info-label">Статус</div><div class="gift-info-value" id="nftViewStatus">Не на продаже</div></div>
+      </div>
+      <div class="collectible-actions" style="padding: 0 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <button id="nftSellBtn" class="btn btn-primary full hidden" style="background: #ffd700; color: #000;">🏷 Выставить на продажу</button>
+        <button id="nftUnlistBtn" class="btn btn-primary full hidden" style="background: #ef5350; color: #fff;">🚫 Снять с продажи</button>
+        <button id="nftBuyBtn" class="btn btn-primary full hidden" style="background: #2aabee;">💳 Купить</button>
+        <button id="nftTransferBtn" class="btn btn-primary full hidden" style="background: #9c27b0;">📤 Передать по @username</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="nftNumberModal" class="modal-overlay hidden dark-overlay">
+    <div class="collectible-modal-card" style="max-width: 400px;">
+      <button id="closeNftNumber" class="icon-btn" style="position: absolute; right: 15px; top: 15px; color: #fff; z-index: 10; background: rgba(0,0,0,0.3); border-radius: 50%;">✕</button>
+      <div class="nft-view-top" style="background: linear-gradient(135deg, #ff9800, #ff5722);">
+        <div class="nft-view-icon">💎</div>
+        <h2 id="nftNumTitle" class="nft-view-title">+888...</h2>
+        <p id="nftNumOwner" class="nft-view-owner"></p>
+      </div>
+      <div class="collectible-info-table">
+        <div class="gift-info-row"><div class="gift-info-label">Тип</div><div class="gift-info-value">NFT номер</div></div>
+        <div class="gift-info-row"><div class="gift-info-label">Владелец</div><div class="gift-info-value" id="nftNumOwnerName">YoriGram</div></div>
+        <div class="gift-info-row"><div class="gift-info-label">Куплен</div><div class="gift-info-value" id="nftNumPurchasedAt">—</div></div>
+        <div class="gift-info-row"><div class="gift-info-label">Цена покупки</div><div class="gift-info-value" id="nftNumPurchasePrice">—</div></div>
+        <div class="gift-info-row"><div class="gift-info-label">Статус</div><div class="gift-info-value" id="nftNumStatus">—</div></div>
+      </div>
+      <div class="collectible-actions" style="padding: 0 20px 20px; display: flex; flex-direction: column; gap: 10px;">
+        <button id="nftNumWearBtn" class="btn btn-primary full hidden" style="background: #4dcd5e; color: #fff;">👕 Активировать (навсегда)</button>
+        <button id="nftNumSellBtn" class="btn btn-primary full hidden" style="background: #ffd700; color: #000;">🏷 Выставить на продажу</button>
+        <button id="nftNumUnlistBtn" class="btn btn-primary full hidden" style="background: #ef5350; color: #fff;">🚫 Снять с продажи</button>
+        <button id="nftNumBuyBtn" class="btn btn-primary full hidden" style="background: #2aabee;">💳 Купить</button>
+        <button id="nftNumTransferBtn" class="btn btn-primary full hidden" style="background: #9c27b0;">📤 Передать по @username</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="marketModal" class="modal-overlay hidden dark-overlay" style="align-items: flex-start; padding-top: 20px;">
+    <div class="fragment-market-layout">
+      <header class="market-header">
+        <h2>Маркет</h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <span style="color: #ffd700; font-weight: 700;">⭐ <span id="marketWallet">0</span></span>
+          <span style="color: #4dcd5e; font-weight: 700;">$CAT <span id="marketCat">0</span></span>
+          <button id="closeMarket" class="icon-btn" style="color: #fff;">✖</button>
+        </div>
+      </header>
+      <div class="market-tabs">
+        <button class="market-tab-btn active" data-mtab="gifts">Подарки</button>
+        <button class="market-tab-btn" data-mtab="usernames">NFT Юзернеймы</button>
+        <button class="market-tab-btn" data-mtab="numbers">NFT Номера</button>
+      </div>
+      <div class="market-main">
+        <aside class="market-sidebar"><div class="market-search"><input type="text" placeholder="Поиск..."></div></aside>
+        <main class="market-content">
+          <div id="marketGiftsTab"><div id="marketGrid" class="fragment-market-grid"></div></div>
+          <div id="marketUsernamesTab" style="display: none;"><div id="marketNftGrid" class="fragment-market-grid"></div></div>
+          <div id="marketNumbersTab" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <h4 style="color: #fff;">От YoriGram</h4>
+              <button id="registerCustomNumberBtn" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">+ Зарегистрировать свой</button>
+            </div>
+            <div id="dropTimer" style="color: #7f91a4; font-size: 13px; margin-bottom: 12px;"></div>
+            <div id="marketNumbersSystem" class="fragment-market-grid"></div>
+            <h4 style="color: #fff; margin: 20px 0 10px;">От пользователей</h4>
+            <div id="marketNumbersUsers" class="fragment-market-grid"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+
+  <div id="giftShopModal" class="modal-overlay hidden dark-overlay">
+    <div class="gift-shop-card">
+      <div class="gift-shop-header"><div class="star-icon">💎</div><h2>Buy a Gift</h2></div>
+      <div class="gift-shop-tabs"><span id="tabAllGifts" class="active">All Gifts</span><span id="tabCollectibles">Collectibles</span></div>
+      <div id="shopGiftGrid" class="shop-gift-grid"></div>
+      <button id="closeGiftShop" class="btn btn-ghost full" style="margin-top: 15px; color: #8b9eb0;">Закрыть</button>
+    </div>
+  </div>
+
+  <div id="giftSendModal" class="modal-overlay hidden dark-overlay">
+    <div class="gift-send-card">
+      <header class="gift-send-header"><h2>Send a Gift</h2><button id="closeGiftSend" class="icon-btn" style="color: #8b9eb0;">✖</button></header>
+      <div class="gift-send-body">
+        <div class="gift-status-bubble" id="giftStatusText"></div>
+        <div class="large-gift-view"><div id="largeGiftIcon" class="large-gift-icon">💖</div><div class="large-gift-info"><strong>Saved Gift</strong></div></div>
+        <div class="gift-input-wrapper"><input id="giftMessageText" placeholder="Enter Message"></div>
+        <div class="gift-options"><div class="gift-option-text"><strong>Hide My Name</strong></div><label class="toggle-switch"><input type="checkbox" id="hideNameToggle"><span class="slider"></span></label></div>
+      </div>
+      <footer class="gift-send-footer" style="display: flex; flex-direction: column; gap: 10px;">
+        <button id="confirmSendGift" class="btn btn-primary full" style="background: #2a8af6;">Send for <span id="confirmGiftPrice">⭐ 15</span></button>
+        <button id="buyForMyself" class="btn btn-ghost full" style="color: #8b9eb0; border: 1px solid #8b9eb0;">Buy for Myself</button>
+      </footer>
+    </div>
+  </div>
+
+  <div id="giftDetailModal" class="modal-overlay hidden dark-overlay">
+    <div class="collectible-modal-card" id="giftDetailCard">
+      <div class="collectible-top-actions">
+        <button id="unlistGiftBtn" class="collectible-more-btn hidden" title="Снять с продажи" style="background: #ef5350; color: #fff;">🚫</button>
+        <button id="sellGiftBtn" class="collectible-more-btn hidden" title="Продать" style="background: #ffd700; color: #000;">🏷</button>
+        <button id="wearGiftBtn" class="collectible-more-btn hidden" title="Носить" style="background: #4dcd5e; color: #fff;">👕</button>
+        <button id="transferGiftBtn" class="collectible-more-btn hidden" title="Передать" style="background: #9c27b0; color: #fff;">📤</button>
+        <button id="closeGiftDetail" class="collectible-close-btn">✕</button>
+      </div>
+      <div class="collectible-bg-layer" id="giftDetailBg"></div>
+      <div class="collectible-pattern-layer" id="giftDetailPattern"></div>
+      <div class="collectible-content">
+        <div class="collectible-model-wrap">
+          <img id="giftModelImg" class="collectible-img hidden" src="" alt="Model">
+          <div id="giftDetailIcon" class="gift-detail-icon">💖</div>
+        </div>
+        <h2 id="giftDetailTitle" class="collectible-title"></h2>
+        <p id="giftDetailSubtitle" class="collectible-subtitle hidden"></p>
+      </div>
+      <div class="collectible-actions" style="z-index: 10; position: relative; padding: 0 20px 20px;">
+        <button id="upgradeGiftBtn" class="btn btn-primary full hidden" style="background: linear-gradient(135deg, #f12711, #f5af19);">Улучшить за 50 ⭐</button>
+      </div>
+      <div class="collectible-info-table" id="giftInfoTable">
+        <div class="gift-info-row"><div class="gift-info-label" id="row1Label"></div><div class="gift-info-value" id="row1Value"></div></div>
+        <div class="gift-info-row"><div class="gift-info-label" id="row2Label"></div><div class="gift-info-value" id="row2Value"></div></div>
+        <div class="gift-info-row"><div class="gift-info-label" id="row3Label"></div><div class="gift-info-value" id="row3Value"></div></div>
+        <div class="gift-info-row"><div class="gift-info-label" id="row4Label"></div><div class="gift-info-value" id="row4Value"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="registerNumberModal" class="modal-overlay hidden dark-overlay">
+    <div class="admin-panel" style="max-width: 400px;">
+      <header class="admin-header">
+        <h2>Свой NFT номер</h2>
+        <button id="closeRegisterNumber" class="icon-btn" style="color: #fff;">✖</button>
+      </header>
+      <div class="admin-body">
+        <p class="hint" style="margin-bottom: 12px;">Начинается с +888, +777 или +666. Чем короче и «красивее» — тем дороже.</p>
+        <label>Желаемый номер</label>
+        <input id="customNumberInput" type="text" placeholder="+8881234567" style="width: 100%; padding: 10px; border-radius: 8px; background: #232e3c; border: 1px solid #242f3d; color: #fff; margin-bottom: 10px;">
+        <div id="customNumberPrice" style="color: #4dcd5e; margin-bottom: 15px; font-size: 14px;">Цена: — $CAT</div>
+        <button id="confirmRegisterNumber" class="btn btn-primary full">Зарегистрировать</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="adminModal" class="modal-overlay hidden dark-overlay">
+    <div class="admin-panel">
+      <header class="admin-header"><h2>⚙️ Админ-панель</h2><button id="closeAdmin" class="icon-btn" style="color: #fff;">✖</button></header>
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-atab="create">Создать подарок</button>
+        <button class="admin-tab" data-atab="users">Пользователи</button>
+      </div>
+      <div class="admin-body">
+        <div id="atab-create" class="admin-content active">
+          <label>Получатель</label><select id="adminTargetUser"></select>
+          <label>Тип подарка</label><select id="adminGiftType"></select>
+          <label>Модель</label><select id="adminModel"></select>
+          <label>Фон</label><select id="adminBg"></select>
+          <label>Узор</label><select id="adminPattern"></select>
+          <label>Уникальный номер (пусто = авто)</label><input id="adminUniqueNumber" type="number" placeholder="Автоматически">
+          <button id="adminCreateGift" class="btn btn-primary full" style="margin-top: 20px;">🎁 Создать и выдать</button>
+        </div>
+        <div id="atab-users" class="admin-content"><div id="adminUsersList"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="botEditorModal" class="modal-overlay hidden dark-overlay">
+    <div class="admin-panel" style="max-width: 500px;">
+      <header class="admin-header">
+        <h2 id="botEditorTitle">Новый бот</h2>
+        <button id="closeBotEditor" class="icon-btn" style="color:#fff;">✖</button>
+      </header>
+      <div class="admin-body">
+        <label>Имя бота</label>
+        <input id="botName" type="text" class="bot-editor-field" placeholder="My Helper Bot" maxlength="64">
+
+        <label>Username</label>
+        <input id="botUsername" type="text" class="bot-editor-field" placeholder="my_helper_bot" maxlength="24">
+
+        <label>Описание</label>
+        <input id="botDesc" type="text" class="bot-editor-field" placeholder="Что делает бот" maxlength="256">
+
+        <label>Скрипт (правила)</label>
+        <div class="bot-rules-hint">
+          Формат: <code>триггер | ответ</code> — одна строка на правило.<br>
+          Триггеры:<br>
+          <code>/команда</code> — точная команда<br>
+          <code>=текст</code> — точный текст<br>
+          <code>contains:слово</code> — содержит<br>
+          <code>startswith:привет</code> — начинается с<br>
+          <code>default</code> — ответ по умолчанию<br>
+          Ответ может содержать <code>\n</code> для переноса строки.
+        </div>
+        <textarea id="botRules" class="bot-rules-textarea" placeholder="/start | Привет! Я твой бот.
+/help | Доступные команды: /start, /help
+hi | Здравствуй, друг!
+contains:как дела | У меня всё отлично, а у тебя?
+default | Я не понимаю :( Напиши /help"></textarea>
+
+        <button id="saveBotBtn" class="btn btn-primary full" style="margin-top: 15px; background: #7c4dff;">Сохранить</button>
+        <button id="deleteBotBtn" class="btn btn-primary full" style="margin-top: 8px; background: #ef5350; display: none;">Удалить бота</button>
+      </div>
+    </div>
+  </div>
+
+<div id="giftTransferModal" class="modal-overlay hidden dark-overlay">
+  <div class="gift-send-card">
+    <header class="gift-send-header">
+      <h2>📤 Передать подарок</h2>
+      <button id="closeGiftTransfer" class="icon-btn" style="color: #8b9eb0;">✖</button>
+    </header>
+    <div class="gift-send-body">
+      <div class="large-gift-view">
+        <div id="transferGiftIcon" class="large-gift-icon">💖</div>
+        <div id="transferGiftName" style="color:#fff; font-weight:700; margin-top:10px;"></div>
+      </div>
+      <label style="color:#7f91a4; font-size:13px;">Получатель (@username)</label>
+      <input id="transferToUsername" placeholder="@username (или yoriplayrobot)"
+             style="width:100%; background:#232e3c; border:1px solid #2b394a; color:#fff; padding:14px; border-radius:12px; outline:none; margin-bottom:10px; margin-top:6px; box-sizing:border-box;">
+      <div class="gift-input-wrapper">
+        <input id="transferMessageText" placeholder="Сообщение (необязательно)">
+      </div>
+      <div class="gift-options" style="margin-top:12px;">
+        <div class="gift-option-text"><strong>Скрыть моё имя</strong></div>
+        <label class="toggle-switch"><input type="checkbox" id="transferHideName"><span class="slider"></span></label>
+      </div>
+    </div>
+    <footer class="gift-send-footer">
+      <button id="confirmTransferGift" class="btn btn-primary full" style="background:#9c27b0;">📤 Передать</button>
+    </footer>
+  </div>
+</div>
+
+  <!-- ═══════════════ КАЗИНО @yoriplayrobot ═══════════════ -->
+  <div id="casinoModal" class="modal-overlay hidden dark-overlay">
+    <div class="casino-layout">
+      <header class="casino-header">
+        <h2>🎰 YoriPlay Casino</h2>
+        <button id="closeCasino" class="icon-btn" style="color:#fff; background: rgba(0,0,0,0.3); border-radius: 50%; width: 36px; height: 36px;">✖</button>
+      </header>
+      <div class="casino-balance-bar">
+        <div>Баланс казино: <strong id="casinoBalanceDisplay">⭐ 0</strong></div>
+        <div style="color:#7f91a4; font-size:12px;">Кошелёк: <span id="casinoWalletDisplay">⭐ 0</span></div>
+        <div style="margin-left:auto; display:flex; gap:6px;">
+          <input id="casinoWithdrawAmount" type="number" placeholder="Сумма" style="width:100px; padding:6px 10px; border-radius:8px; background:#232e3c; border:1px solid #242f3d; color:#fff; font-size:12px;">
+          <button id="casinoWithdrawBtn" class="btn btn-ghost" style="padding:6px 12px; font-size:12px; border:1px solid #ffd700; color:#ffd700;">Вывести ⭐</button>
+        </div>
+      </div>
+      <div class="casino-tabs">
+        <button class="active" data-ctab="inventory">📦 Инвентарь</button>
+        <button data-ctab="mines">💣 Мины</button>
+        <button data-ctab="plinko">🎯 Плинко</button>
+        <button data-ctab="upgrader">⬆️ Апгрейдер</button>
+      </div>
+      <div class="casino-content">
+        <div id="casinoTab_inventory">
+          <p style="color:#7f91a4; font-size:13px; margin-bottom:15px;">Передайте любой NFT на <strong style="color:#ff9800;">@yoriplayrobot</strong> — он появится здесь.</p>
+          <div id="casinoInventoryList"></div>
+        </div>
+        <div id="casinoTab_mines" style="display:none;">
+          <div id="minesConfig"></div>
+          <div id="minesGrid" class="mines-grid" style="display:none;"></div>
+          <div id="minesStatus"></div>
+        </div>
+        <div id="casinoTab_plinko" style="display:none;">
+          <div id="plinkoForm"></div>
+        </div>
+        <div id="casinoTab_upgrader" style="display:none;">
+          <div id="upgraderForm"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/shared.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

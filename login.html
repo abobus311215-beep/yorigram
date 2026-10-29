@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Вход — Мессенджер</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-body">
+  <div class="auth-wrap">
+    <a href="/" class="brand brand-lg auth-brand">
+      <span class="brand-mark">✦</span>
+      <span>Мессенджер</span>
+    </a>
+
+    <div class="auth-card">
+      <h1>С возвращением</h1>
+      <p class="auth-sub">Войди в свой аккаунт, чтобы продолжить</p>
+
+      <form id="loginForm" class="auth-form">
+        <label for="identifier">Юзернейм или телефон</label>
+        <input id="identifier" autocomplete="username" placeholder="@username или +7…">
+
+        <label for="password">Пароль</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+
+        <p id="error" class="form-error" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-lg full">Войти</button>
+      </form>
+
+      <p class="auth-switch">
+        Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/shared.js"></script>
+  <script src="/js/login.js"></script>
+</body>
+</html>

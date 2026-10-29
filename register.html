@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Регистрация — Мессенджер</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="auth-body">
+  <div class="auth-wrap">
+    <a href="/" class="brand brand-lg auth-brand">
+      <span class="brand-mark">✦</span>
+      <span>Мессенджер</span>
+    </a>
+
+    <div class="auth-card">
+      <h1>Создать аккаунт</h1>
+      <p class="auth-sub">Займёт меньше минуты</p>
+
+      <form id="registerForm" class="auth-form">
+        <label for="username">Юзернейм</label>
+        <input id="username" autocomplete="username" placeholder="alex_01">
+
+        <label for="phone">Номер телефона</label>
+        <input id="phone" autocomplete="tel" placeholder="+7 900 000-00-00">
+
+        <label for="password">Пароль</label>
+        <input id="password" type="password" autocomplete="new-password" placeholder="Минимум 6 символов">
+
+        <p id="error" class="form-error" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-lg full">Создать аккаунт</button>
+      </form>
+
+      <p class="auth-switch">
+        Уже есть аккаунт? <a href="/login">Войти</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="/js/shared.js"></script>
+  <script src="/js/register.js"></script>
+</body>
+</html>
